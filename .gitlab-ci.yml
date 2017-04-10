@@ -1,0 +1,25 @@
+image: docker:git
+
+# When using dind, it's wise to use the overlayfs driver for
+# improved performance.
+variables:
+  DOCKER_DRIVER: overlay
+
+services:
+  - docker:dind
+
+stages:
+  - build
+
+before_script:
+  - docker login -u "gitlab-ci-token" -p "$CI_BUILD_TOKEN" $CI_REGISTRY
+  - 'which ssh-agent || ( apk add --no-cache openssh-client )'
+  - 'which bash || ( apk add --no-cache bash )'
+  - eval $(ssh-agent -s)
+  - bash -c 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
+
+build:
+  stage: build
+  script:
+    - docker build --pull -t "$CI_REGISTRY_IMAGE:$CI_BUILD_REF_NAME" .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_BUILD_REF_NAME"
